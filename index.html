@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turbo SMM - Premium Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { background: linear-gradient(135deg, #0f172a, #1e1b4b, #311042); min-height: 100vh; color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center justify-start gap-6">
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-xl">
+        <div class="glass-card p-3 rounded-xl flex items-center gap-2"><span>👤</span><div><p class="text-[10px] text-gray-400">User</p><p class="font-bold text-xs">Khatri ✔</p></div></div>
+        <div class="glass-card p-3 rounded-xl flex items-center gap-2"><span>💰</span><div><p class="text-[10px] text-gray-400">Balance</p><p class="font-bold text-xs text-green-400" id="user-balance-nav">₹40.00</p></div></div>
+        <div class="glass-card p-3 rounded-xl flex items-center gap-2"><span>📦</span><div><p class="text-[10px] text-gray-400">Orders</p><p class="font-bold text-xs">14015</p></div></div>
+        <div class="glass-card p-3 rounded-xl flex items-center gap-2"><span>🛍️</span><div><p class="text-[10px] text-gray-400">Spend</p><p class="font-bold text-xs">₹0.00</p></div></div>
+    </div>
+
+    <div class="w-full max-w-xl space-y-6">
+        <div class="glass-card rounded-2xl p-6 shadow-2xl border border-emerald-500/20">
+            <h2 class="text-lg font-bold text-center mb-4 text-emerald-400">💰 ADD FUNDS (SCAN & PAY)</h2>
+            <div class="flex flex-col items-center justify-center text-center space-y-4">
+                <div class="bg-white p-2 rounded-xl inline-block"><img src="https://i.ibb.co/cSqtzfSk/Screenshot-20260617-144925-2.jpg" alt="Scan QR" class="w-[170px] h-[170px] object-contain"></div>
+                <p class="text-xs text-gray-300">Scan QR Code using PhonePe, GPay or Paytm. After payment, enter Transaction ID.</p>
+                <form id="deposit-form" class="w-full space-y-3">
+                    <input type="text" id="utr-number" required placeholder="Enter Transaction ID / UTR No." class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white">
+                    <input type="number" id="deposit-amount" required placeholder="Enter Amount Paid (₹)" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white">
+                    <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold py-2.5 rounded-xl text-xs tracking-wider">Submit Payment Verification</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-6 shadow-2xl">
+            <h2 class="text-lg font-bold text-center mb-4 text-pink-400">🚀 PLACE NEW ORDER</h2>
+            <form id="smm-form" class="space-y-4">
+                <div><label class="block text-xs text-gray-400 mb-1">Category</label><select id="category-select" class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"><option value="">Loading...</option></select></div>
+                <div><label class="block text-xs text-gray-400 mb-1">Services</label><select id="service-select" disabled class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white disabled:opacity-50"><option value="">Select category first</option></select></div>
+                <div><label class="block text-xs text-gray-400 mb-1">Target Link</label><input type="url" id="order-link" required placeholder="https://..." class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"></div>
+                <div><label class="block text-xs text-gray-400 mb-1">Quantity</label><input type="number" id="order-qty" value="100" min="1" required class="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"></div>
+                <div class="flex justify-between items-center bg-black/20 px-4 py-3 rounded-xl"><span class="text-xs text-gray-400">Total Charge (20% Extra):</span><span id="total-charge" class="font-bold text-pink-400 text-lg">₹0.00</span></div>
+                <button type="submit" class="w-full bg-gradient-to-r from-pink-500 to-purple-600 font-semibold py-3.5 rounded-xl text-sm">Place Order</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let allServices = [];
+        async function fetchEngineData() {
+            try {
+                const res = await fetch('/api/services');
+                allServices = await res.json();
+                const categories = [...new Set(allServices.map(s => s.category))];
+                const catSelect = document.getElementById('category-select');
+                catSelect.innerHTML = '<option value="">-- Choose Category --</option>';
+                categories.forEach(cat => { catSelect.innerHTML += `<option value="${cat}">${cat}</option>`; });
+            } catch (err) { console.log("Error loading services."); }
+        }
+        document.getElementById('category-select').addEventListener('change', (e) => {
+            const selectedCat = e.target.value;
+            const serviceSelect = document.getElementById('service-select');
+            if(!selectedCat) { serviceSelect.disabled = true; return; }
+            const filtered = allServices.filter(s => s.category === selectedCat);
+            serviceSelect.innerHTML = '<option value="">-- Choose Service --</option>';
+            filtered.forEach(s => { serviceSelect.innerHTML += `<option value="${s.service}" data-rate="${s.rate}">${s.name} - ₹${s.rate}/K</option>`; });
+            serviceSelect.disabled = false; calcPrice();
+        });
+        function calcPrice() {
+            const serviceSelect = document.getElementById('service-select');
+            const qty = parseInt(document.getElementById('order-qty').value) || 0;
+            const activeOpt = serviceSelect.options[serviceSelect.selectedIndex];
+            if(!activeOpt || !activeOpt.dataset.rate) { document.getElementById('total-charge').innerText = '₹0.00'; return; }
+            const rate = parseFloat(activeOpt.dataset.rate);
+            const finalCost = (rate / 1000) * qty;
+            document.getElementById('total-charge').innerText = `₹${finalCost.toFixed(2)}`;
+        }
+        document.getElementById('service-select').addEventListener('change', calcPrice);
+        document.getElementById('order-qty').addEventListener('input', calcPrice);
+        document.getElementById('smm-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const serviceId = document.getElementById('service-select').value;
+            const link = document.getElementById('order-link').value;
+            const quantity = document.getElementById('order-qty').value;
+            if(!serviceId) return alert('Select service');
+            try {
+                const res = await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serviceId, link, quantity }) });
+                const result = await res.json();
+                if(result.order) alert(`Order Placed! ID: ${result.order}`);
+                else alert(`Error: ${result.error || 'Failed'}`);
+            } catch(err) { alert('Request error.'); }
+        });
+        document.getElementById('deposit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            alert(`Payment Submitted!\nAdmin will verify soon.`);
+            document.getElementById('deposit-form').reset();
+        });
+        fetchEngineData();
+    </script>
+</body>
+</html>
