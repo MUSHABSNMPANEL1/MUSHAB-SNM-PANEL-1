@@ -1,20 +1,31 @@
 export default async function handler(req, res) {
-    const turboApiUrl = 'https://turbosmm.site/api/v2';
-    const apiToken = '024bfcbaa69424012bbf368cf30c285e';
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') return res.status(200).end();
+
     try {
-        const response = await fetch(`${turboApiUrl}?action=services`, {
+        const response = await fetch('https://turbosmm.site/api/v2', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ key: apiToken })
+            body: new URLSearchParams({
+                key: '024bfcbaa69424012bbf368cf30c285e',
+                action: 'services'
+            })
         });
-        if (!response.ok) throw new Error("Fetch failed");
-        const originalServices = await response.json();
-        const modifiedServices = originalServices.map(service => {
-            let originalRate = parseFloat(service.rate);
-            let newRate = originalRate * 1.20; 
-            return { ...service, rate: newRate.toFixed(2) };
-        });
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        return res.status(200).json(modifiedServices);
-    } catch (error) { return res.status(500).json({ error: "Backend fetch error", detail: error.message }); }
+
+        const data = await response.json();
+        if (!Array.isArray(data)) return res.status(400).json({ error: "API Error", data });
+
+        // 20% Profit Margin add karne ke liye
+        const modified = data.map(s => ({
+            ...s,
+            rate: (parseFloat(s.rate) * 1.20).toFixed(2)
+        }));
+
+        return res.status(200).json(modified);
+    } catch (err) {
+        return res.status(500).json({ error: "Connect failed", message: err.message });
+    }
 }
